@@ -12,6 +12,7 @@ app.use(
   cors({
     credentials: true,
     origin: ["https://tame-loincloth-bass.cyclic.app", "https://front-booking-hotels.vercel.app"],
+    // origin: ["http://localhost:8888", "http://localhost:5173"],
   })
 );
 
@@ -21,3 +22,4 @@ app.listen(port, async () => {
   // await initMySQL();
   console.log(`Server started at port ${port}`);
 })
+
