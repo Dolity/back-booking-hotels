@@ -11,7 +11,7 @@ app.use(express.json());
 app.use(
   cors({
     credentials: true,
-    origin: ["http://localhost:8888", "http://localhost:5173"],
+    origin: ["https://tame-loincloth-bass.cyclic.app", "https://front-booking-hotels.vercel.app"],
   })
 );
 
