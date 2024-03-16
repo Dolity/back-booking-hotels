@@ -76,8 +76,6 @@ const createUser = async (req, res) => {
   }
 };
 
-
-
 const authUser = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -87,6 +85,8 @@ const authUser = async (req, res) => {
     );
     const userData = results[0];
     const match = await bcrypt.compare(password, userData.password);
+
+    const id = userData.id
 
     if (!match) {
       res.status(400).json({
@@ -105,6 +105,7 @@ const authUser = async (req, res) => {
       message: "Login success",
       status: 200,
       token,
+      id
     });
 
     // 2. use Cookie 
@@ -129,7 +130,7 @@ const authUser = async (req, res) => {
   } catch (error) {
     console.log("Login Fail", error);
     res.json({
-      message: "Insert Fail",
+      message: "Login Fail",
       status: 400,
       error,
     });
@@ -143,8 +144,6 @@ const getUsers = async (req, res) => {
 
         // 2. use Cookie
         //const authToken = req.cookies.token
-
-
 
         let authToken = ""
         // // spilt Bearer token go away need token only
@@ -188,6 +187,58 @@ const getUsers = async (req, res) => {
     }
 }
 
+const createBooking = async (req, res) => {
+  try {
+    let { user_id, checkin_date, checkout_date, full_name, phone_number, email, status } = req.body;
 
-module.exports = { createUser, authUser, getUsers }
+    status = "Reserved"
+
+    const bookingData = {
+      user_id,
+      checkin_date, 
+      checkout_date, 
+      full_name, 
+      phone_number,
+      email,
+      status
+    };
+    const [result] = await conn.query("INSERT INTO bookings SET ?", bookingData);
+
+    if (!result) {
+      throw { message: "Insert Fail"}
+    }
+
+    res.json({
+      message: "Insert OK",
+      status: 201
+    });
+  } catch (error) {
+    console.log("error", error);
+    res.json({
+      message: "Insert Fail",
+      status: 400,
+      error
+    });
+  }
+};
+
+const getBookings = async (req, res) => {
+  try {
+    const [results] = await conn.query("SELECT * FROM bookings");
+    res.json({
+      message: "Get bookings success",
+      status: 200,
+      bookings: results
+    })
+  } catch (error) {
+    console.log("error", error);
+    res.json({
+      message: "Get bookings Fail",
+      status: 400,
+      error
+    });
+  }
+}
+
+module.exports = { createUser, authUser, getUsers, createBooking, getBookings }
 
