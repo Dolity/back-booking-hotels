@@ -5,6 +5,7 @@ const session = require("express-session");
 const bcrypt = require("bcrypt");
 const mysql = require("mysql2/promise");
 const config = require("../config/config")
+const fs = require('fs');
 
 const app = express();
 app.use(express.json());
@@ -23,15 +24,20 @@ const secret = "mysecret";
 let conn = null;
 const initMySQL = async () => {
     try {
+      const ca = fs.readFileSync('ca.pem');
         conn = await mysql.createConnection({
             host: config.db.host,
             user: config.db.username,
             password: config.db.password,
             database: config.db.database,
+            ssl: {
+              ca: ca 
+            }
           });
           console.log('MySQL connected successfully');
     } catch (error) {
-        console.log('Error connecting to MySQL:', error);
+      console.log("conn: ",conn);
+      console.log('Error connecting to MySQL:', error);
     }
   };
 
