@@ -4,8 +4,8 @@ const cookieParser = require("cookie-parser");
 const session = require("express-session");
 const bcrypt = require("bcrypt");
 const config = require("../config/config")
-const mysql = require("mysql2/promise");
-// const mysql = require("mysql")
+// const mysql = require("mysql2/promise");
+const mysql = require("mysql")
 
 const app = express();
 app.use(express.json());
@@ -52,26 +52,25 @@ var db_config = {
 
 let conn;
 
-const handleDisconnect = async () =>  {
-  conn = await mysql.createConnection(db_config); // Recreate the connection, since
-                                                  // the old one cannot be reused.
-
-                                                  conn.connect(function(err) {              // The server is either down
-    if(err) {                                     // or restarting (takes a while sometimes).
+const handleDisconnect = () => {
+  conn = mysql.createConnection(db_config);
+  
+  conn.connect((err) => {
+    if (err) {
       console.log('error when connecting to db:', err);
-      setTimeout(handleDisconnect, 2000); // We introduce a delay before attempting to reconnect,
-    }                                     // to avoid a hot loop, and to allow our node script to
-  });                                     // process asynchronous requests in the meantime.
-                                          // If you're also serving http, display a 503 error.
-    conn.on('error', function(err) {
-    console.log('db error', err);
-    if(err.code === 'PROTOCOL_CONNECTION_LOST') { // Connection to the MySQL server is usually
-      handleDisconnect();                         // lost due to either server restart, or a
-    } else {                                      // connnection idle timeout (the wait_timeout
-      throw err;                                  // server variable configures this)
+      setTimeout(handleDisconnect, 2000);
     }
   });
-}
+
+  conn.on('error', (err) => {
+    console.log('db error', err);
+    if (err.code === 'PROTOCOL_CONNECTION_LOST') {
+      handleDisconnect();
+    } else {
+      throw err;
+    }
+  });
+};
 
 handleDisconnect();
 
@@ -81,35 +80,42 @@ const helloWord = (req, res) => {
   });
 }
 
-const createUser = async (req, res) => {
+const createUser = (req, res) => {
   try {
-    // ตรวจสอบว่า conn ไม่ใช่ null ก่อนใช้งาน query
     if (conn) {
       const { email, password } = req.body;
-      const passwordHash = await bcrypt.hash(password, 10);
+      bcrypt.hash(password, 10, (err, passwordHash) => {
+        if (err) {
+          throw err;
+        }
+        
+        const options = { 
+          timeZone: "Asia/Bangkok", 
+          year: "numeric", 
+          month: "2-digit", 
+          day: "2-digit", 
+          hour: "2-digit", 
+          minute: "2-digit", 
+          second: "2-digit" 
+        };
+        const currentTimestamp = new Date().toLocaleString("en-US", options);
 
-      const options = { 
-        timeZone: "Asia/Bangkok", 
-        year: "numeric", 
-        month: "2-digit", 
-        day: "2-digit", 
-        hour: "2-digit", 
-        minute: "2-digit", 
-        second: "2-digit" 
-      };
-      const currentTimestamp = new Date().toLocaleString("en-US", options);
-      console.log("currentTimestamp", currentTimestamp);
+        const userData = {
+          email,
+          password: passwordHash,
+          timestamp: currentTimestamp
+        };
 
-      const userData = {
-        email,
-        password: passwordHash,
-        timestamp: currentTimestamp
-      };
-      const [result] = await conn.query("INSERT INTO users SET ?", userData);
-
-      res.json({
-        message: "Insert OK",
-        status: 201
+        conn.query("INSERT INTO users SET ?", userData, (err, result) => {
+          if (err) {
+            throw err;
+          }
+          
+          res.json({
+            message: "Insert OK",
+            status: 201
+          });
+        });
       });
     } else {
       res.status(500).json({
