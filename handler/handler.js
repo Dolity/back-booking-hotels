@@ -30,6 +30,7 @@ const initMySQL = async () => {
             user: config.db.username,
             password: config.db.password,
             database: config.db.database,
+            connectTimeout: 60000
           });
           console.log('MySQL connected successfully');
     } catch (error) {
