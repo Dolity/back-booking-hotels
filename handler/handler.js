@@ -80,42 +80,33 @@ const helloWord = (req, res) => {
   });
 }
 
-const createUser = (req, res) => {
+const createUser = async (req, res) => {
   try {
     if (conn) {
       const { email, password } = req.body;
-      bcrypt.hash(password, 10, (err, passwordHash) => {
-        if (err) {
-          throw err;
-        }
-        
-        const options = { 
-          timeZone: "Asia/Bangkok", 
-          year: "numeric", 
-          month: "2-digit", 
-          day: "2-digit", 
-          hour: "2-digit", 
-          minute: "2-digit", 
-          second: "2-digit" 
-        };
-        const currentTimestamp = new Date().toLocaleString("en-US", options);
+      const passwordHash = await bcrypt.hash(password, 10);
 
-        const userData = {
-          email,
-          password: passwordHash,
-          timestamp: currentTimestamp
-        };
+      const options = { 
+        timeZone: "Asia/Bangkok", 
+        year: "numeric", 
+        month: "2-digit", 
+        day: "2-digit", 
+        hour: "2-digit", 
+        minute: "2-digit", 
+        second: "2-digit" 
+      };
+      const currentTimestamp = new Date().toLocaleString("en-US", options);
 
-        conn.query("INSERT INTO users SET ?", userData, (err, result) => {
-          if (err) {
-            throw err;
-          }
-          
-          res.json({
-            message: "Insert OK",
-            status: 201
-          });
-        });
+      const userData = {
+        email,
+        password: passwordHash,
+        timestamp: currentTimestamp
+      };
+      conn.query("INSERT INTO users SET ?", userData);
+
+      res.json({
+        message: "Insert OK",
+        status: 201
       });
     } else {
       res.status(500).json({
@@ -134,7 +125,7 @@ const createUser = (req, res) => {
 };
 
 
-const authUser = (req, res) => {
+const authUser = async (req, res) => {
   try {
     const { email, password } = req.body;
     const [results] = conn.query(
@@ -142,7 +133,7 @@ const authUser = (req, res) => {
       email
     );
     const userData = results[0];
-    const match = bcrypt.compare(password, userData.password);
+    const match = await bcrypt.compare(password, userData.password);
 
     const id = userData.id
 
@@ -175,7 +166,7 @@ const authUser = (req, res) => {
   }
 };
 
-const getUsers =  (req, res) => {
+const getUsers = async (req, res) => {
     try {
         const authHeader = req.headers['authorization']
 
@@ -187,12 +178,12 @@ const getUsers =  (req, res) => {
 
         const user = jwt.verify(authToken, secret)
 
-        const [checkResult] =  conn.query("SELECT * FROM users WHERE email = ?", user.email);
+        const [checkResult] = conn.query("SELECT * FROM users WHERE email = ?", user.email);
         if (!checkResult[0]) {
             throw { message: "user not found"}
         }
 
-        const [results] =  conn.query("SELECT * FROM users");
+        const [results] = conn.query("SELECT * FROM users");
         res.json({
             message: "Authentication success",
             status: 200,
@@ -209,7 +200,7 @@ const getUsers =  (req, res) => {
     }
 }
 
-const createBooking =  (req, res) => {
+const createBooking = async (req, res) => {
   try {
     let { user_id, checkin_date, checkout_date, full_name, phone_number, email, status } = req.body;
 
@@ -224,7 +215,7 @@ const createBooking =  (req, res) => {
       email,
       status
     };
-    const [result] =  conn.query("INSERT INTO bookings SET ?", bookingData);
+    const [result] = conn.query("INSERT INTO bookings SET ?", bookingData);
 
     if (!result) {
       throw { message: "Insert Fail"}
@@ -244,9 +235,9 @@ const createBooking =  (req, res) => {
   }
 };
 
-const getBookings =  (req, res) => {
+const getBookings = async (req, res) => {
   try {
-    const [results] =  conn.query("SELECT * FROM bookings");
+    const [results] = conn.query("SELECT * FROM bookings");
     res.json({
       message: "Get bookings success",
       status: 200,
