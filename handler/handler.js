@@ -134,15 +134,15 @@ const createUser = (req, res) => {
 };
 
 
-const authUser = async (req, res) => {
+const authUser = (req, res) => {
   try {
     const { email, password } = req.body;
-    const [results] = await conn.query(
+    const [results] = conn.query(
       "SELECT * FROM users WHERE email = ?",
       email
     );
     const userData = results[0];
-    const match = await bcrypt.compare(password, userData.password);
+    const match = bcrypt.compare(password, userData.password);
 
     const id = userData.id
 
@@ -175,7 +175,7 @@ const authUser = async (req, res) => {
   }
 };
 
-const getUsers = async (req, res) => {
+const getUsers =  (req, res) => {
     try {
         const authHeader = req.headers['authorization']
 
@@ -187,12 +187,12 @@ const getUsers = async (req, res) => {
 
         const user = jwt.verify(authToken, secret)
 
-        const [checkResult] = await conn.query("SELECT * FROM users WHERE email = ?", user.email);
+        const [checkResult] =  conn.query("SELECT * FROM users WHERE email = ?", user.email);
         if (!checkResult[0]) {
             throw { message: "user not found"}
         }
 
-        const [results] = await conn.query("SELECT * FROM users");
+        const [results] =  conn.query("SELECT * FROM users");
         res.json({
             message: "Authentication success",
             status: 200,
@@ -209,7 +209,7 @@ const getUsers = async (req, res) => {
     }
 }
 
-const createBooking = async (req, res) => {
+const createBooking =  (req, res) => {
   try {
     let { user_id, checkin_date, checkout_date, full_name, phone_number, email, status } = req.body;
 
@@ -224,7 +224,7 @@ const createBooking = async (req, res) => {
       email,
       status
     };
-    const [result] = await conn.query("INSERT INTO bookings SET ?", bookingData);
+    const [result] =  conn.query("INSERT INTO bookings SET ?", bookingData);
 
     if (!result) {
       throw { message: "Insert Fail"}
@@ -244,9 +244,9 @@ const createBooking = async (req, res) => {
   }
 };
 
-const getBookings = async (req, res) => {
+const getBookings =  (req, res) => {
   try {
-    const [results] = await conn.query("SELECT * FROM bookings");
+    const [results] =  conn.query("SELECT * FROM bookings");
     res.json({
       message: "Get bookings success",
       status: 200,
