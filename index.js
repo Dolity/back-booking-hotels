@@ -2,7 +2,6 @@ const express = require("express");
 const cors = require("cors");
 const app = express();
 const userRouter = require("./router/route");
-const { initMySQL } = require("./database/database");
 
 const port = process.env.PORT || 3306;
 
@@ -17,10 +16,8 @@ app.use(
   })
 );
 
-app.use("/api/v1/user", userRouter)
-
-app.listen(port, async () => {
-  // await initMySQL();
+app.listen(port, () => {
   console.log(`Server started at port ${port}`);
 })
 
+app.use("/api/v1/user", userRouter)
