@@ -84,29 +84,38 @@ const createUser = async (req, res) => {
   try {
     if (conn) {
       const { email, password } = req.body;
-      const passwordHash = await bcrypt.hash(password, 10);
+      bcrypt.hash(password, 10, (err, passwordHash) => {
+        if (err) {
+          throw err;
+        }
 
-      const options = { 
-        timeZone: "Asia/Bangkok", 
-        year: "numeric", 
-        month: "2-digit", 
-        day: "2-digit", 
-        hour: "2-digit", 
-        minute: "2-digit", 
-        second: "2-digit" 
-      };
-      const currentTimestamp = new Date().toLocaleString("en-US", options);
+        const options = { 
+          timeZone: "Asia/Bangkok", 
+          year: "numeric", 
+          month: "2-digit", 
+          day: "2-digit", 
+          hour: "2-digit", 
+          minute: "2-digit", 
+          second: "2-digit" 
+        };
+        const currentTimestamp = new Date().toLocaleString("en-US", options);
 
-      const userData = {
-        email,
-        password: passwordHash,
-        timestamp: currentTimestamp
-      };
-      conn.query("INSERT INTO users SET ?", userData);
+        const userData = {
+          email,
+          password: passwordHash,
+          timestamp: currentTimestamp
+        };
 
-      res.json({
-        message: "Insert OK",
-        status: 201
+        conn.query("INSERT INTO users SET ?", userData, (err, result) => {
+          if (err) {
+            throw err;
+          }
+
+          res.json({
+            message: "Insert OK",
+            status: 201
+          });
+        });
       });
     } else {
       res.status(500).json({
@@ -128,34 +137,39 @@ const createUser = async (req, res) => {
 const authUser = async (req, res) => {
   try {
     const { email, password } = req.body;
-    const [results] = conn.query(
+    conn.query(
       "SELECT * FROM users WHERE email = ?",
-      email
+      email,
+      async (err, results) => {
+        if (err) {
+          throw err;
+        }
+        
+        const userData = results[0];
+        const match = await bcrypt.compare(password, userData.password);
+
+        const id = userData.id
+
+        if (!match) {
+          res.status(400).json({
+            message: "Login Fail",
+            status: 400
+          });
+          return false;
+        }
+
+        const token = jwt.sign({ email, role: "admin" }, secret, {
+          expiresIn: "10h",
+        });
+
+        res.json({
+          message: "Login success",
+          status: 200,
+          token,
+          id
+        });
+      }
     );
-    const userData = results[0];
-    const match = await bcrypt.compare(password, userData.password);
-
-    const id = userData.id
-
-    if (!match) {
-      res.status(400).json({
-        message: "Login Fail",
-        status: 400
-      });
-      return false;
-    }
-
-    const token = jwt.sign({ email, role: "admin" }, secret, {
-      expiresIn: "10h",
-    });
-
-    res.json({
-      message: "Login success",
-      status: 200,
-      token,
-      id
-    });
-
   } catch (error) {
     console.log("Login Fail", error);
     res.json({
@@ -167,38 +181,51 @@ const authUser = async (req, res) => {
 };
 
 const getUsers = async (req, res) => {
-    try {
-        const authHeader = req.headers['authorization']
+  try {
+    const authHeader = req.headers['authorization']
 
-        let authToken = ""
+    let authToken = ""
 
-        if (authHeader) {
-            authToken = authHeader.split(' ')[1]
+    if (authHeader) {
+      authToken = authHeader.split(' ')[1]
+    }
+
+    const user = jwt.verify(authToken, secret)
+
+    conn.query(
+      "SELECT * FROM users WHERE email = ?",
+      user.email,
+      async (err, checkResult) => {
+        if (err) {
+          throw err;
         }
 
-        const user = jwt.verify(authToken, secret)
-
-        const [checkResult] = conn.query("SELECT * FROM users WHERE email = ?", user.email);
         if (!checkResult[0]) {
-            throw { message: "user not found"}
+          throw { message: "user not found"}
         }
 
-        const [results] = conn.query("SELECT * FROM users");
-        res.json({
+        conn.query("SELECT * FROM users", async (err, results) => {
+          if (err) {
+            throw err;
+          }
+
+          res.json({
             message: "Authentication success",
             status: 200,
             users: results
-        })
-        
-    } catch (error) {
-        console.log("error", error);
-        res.json({
-            message: "Authentication Fail",
-            status: 401,
-            error
-        })
-    }
-}
+          });
+        });
+      }
+    );
+  } catch (error) {
+    console.log("error", error);
+    res.json({
+      message: "Authentication Fail",
+      status: 401,
+      error
+    });
+  }
+};
 
 const createBooking = async (req, res) => {
   try {
@@ -215,15 +242,19 @@ const createBooking = async (req, res) => {
       email,
       status
     };
-    const [result] = conn.query("INSERT INTO bookings SET ?", bookingData);
+    conn.query("INSERT INTO bookings SET ?", bookingData, async (err, result) => {
+      if (err) {
+        throw err;
+      }
 
-    if (!result) {
-      throw { message: "Insert Fail"}
-    }
+      if (!result) {
+        throw { message: "Insert Fail"}
+      }
 
-    res.json({
-      message: "Insert OK",
-      status: 201
+      res.json({
+        message: "Insert OK",
+        status: 201
+      });
     });
   } catch (error) {
     console.log("error", error);
@@ -237,12 +268,17 @@ const createBooking = async (req, res) => {
 
 const getBookings = async (req, res) => {
   try {
-    const [results] = conn.query("SELECT * FROM bookings");
-    res.json({
-      message: "Get bookings success",
-      status: 200,
-      bookings: results
-    })
+    conn.query("SELECT * FROM bookings", async (err, results) => {
+      if (err) {
+        throw err;
+      }
+
+      res.json({
+        message: "Get bookings success",
+        status: 200,
+        bookings: results
+      });
+    });
   } catch (error) {
     console.log("error", error);
     res.json({
@@ -251,7 +287,7 @@ const getBookings = async (req, res) => {
       error
     });
   }
-}
+};
 
 module.exports = { helloWord, createUser, authUser, getUsers, createBooking, getBookings }
 
