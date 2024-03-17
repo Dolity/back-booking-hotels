@@ -15,7 +15,6 @@ app.use(
       "https://front-booking-hotels.vercel.app",
       "http://localhost:5173",
       "http://localhost:8000",
-      "http://localhost:8888"
     ],
   })
 );

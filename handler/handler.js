@@ -70,7 +70,7 @@ const createUser = async (req, res) => {
       password: passwordHash,
       timestamp: currentTimestamp
     };
-    const [result] = await conn.query("INSERT INTO Users SET ?", userData);
+    const [result] = await conn.query("INSERT INTO users SET ?", userData);
 
     res.json({
       message: "Insert OK",
